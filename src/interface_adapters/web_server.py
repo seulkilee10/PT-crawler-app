@@ -403,10 +403,22 @@ def crawl_multi_site():
         print(f"🌐 DEBUG - 응답 전송 중...")
         return response
         
-    except Exception as e:
+    except RuntimeError as e:
+        # WebDriver 초기화 실패 등의 런타임 에러
+        error_message = str(e)
+        print(f"❌ RuntimeError: {error_message}")
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f"서버 설정 오류: {error_message}",
+            'error_type': 'runtime_error'
+        }), 502
+    except Exception as e:
+        error_message = str(e)
+        print(f"❌ Exception: {error_message}")
+        return jsonify({
+            'success': False,
+            'message': f"서버 내부 오류: {error_message}",
+            'error_type': 'internal_error'
         }), 500
 
 

@@ -2,11 +2,15 @@ services:
   - type: web
     name: topis-ictr-crawler
     env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn --bind 0.0.0.0:$PORT src.interface_adapters.web_server:app"
+    buildCommand: "chmod +x render_install.sh && ./render_install.sh"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 src.interface_adapters.web_server:app"
     plan: free
     envVars:
       - key: PYTHONPATH
         value: "."
       - key: FLASK_APP
         value: "src.interface_adapters.web_server:app"
+      - key: GOOGLE_CHROME_BIN
+        value: "/usr/bin/google-chrome"
+      - key: CHROMEDRIVER_PATH
+        value: "/usr/local/bin/chromedriver"

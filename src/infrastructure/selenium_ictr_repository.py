@@ -3,6 +3,7 @@ Selenium-based implementation for ICTR (Incheon Transit Corporation).
 """
 import asyncio
 import re
+import os
 from datetime import datetime
 from typing import List, Optional
 from selenium import webdriver
@@ -10,7 +11,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
 
 from ..domain.notice import Notice, NoticeCategory, Site
 from ..domain.notice_repository import NoticeRepository
@@ -33,60 +36,101 @@ class SeleniumIctrRepository(NoticeRepository):
     def _get_driver(self) -> webdriver.Chrome:
         """Get Chrome WebDriver instance with speed optimizations."""
         if self.driver is None:
-            options = Options()
-            if self.headless:
-                options.add_argument('--headless')
-            
-            # 속도 최적화 옵션들 (대폭 강화)
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--disable-extensions')
-            options.add_argument('--disable-plugins')
-            options.add_argument('--disable-images')  # 이미지 로딩 차단
-            options.add_argument('--disable-css')     # CSS 로딩 차단
-            options.add_argument('--disable-web-security')
-            options.add_argument('--disable-features=TranslateUI')
-            options.add_argument('--disable-ipc-flooding-protection')
-            options.add_argument('--disable-renderer-backgrounding')
-            options.add_argument('--disable-backgrounding-occluded-windows')
-            options.add_argument('--disable-client-side-phishing-detection')
-            options.add_argument('--disable-sync')
-            options.add_argument('--disable-default-apps')
-            options.add_argument('--no-first-run')
-            options.add_argument('--no-default-browser-check')
-            options.add_argument('--window-size=1280,720')
-            
-            # 추가 속도 최적화 (더 공격적)
-            options.add_argument('--disable-logging')
-            options.add_argument('--disable-network-service-logging')
-            options.add_argument('--aggressive-cache-discard')
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_argument('--disable-features=VizDisplayCompositor')
-            options.add_argument('--disable-3d-apis')
-            options.add_argument('--disable-smooth-scrolling')
-            options.add_argument('--disable-threaded-scrolling')
-            
-            # 페이지 로딩 전략을 none으로 변경 (가장 빠름)
-            options.page_load_strategy = 'none'
-            
-            # 불필요한 리소스 차단 (더 공격적)
-            prefs = {
-                "profile.managed_default_content_settings.images": 2,
-                "profile.default_content_setting_values.notifications": 2,
-                "profile.managed_default_content_settings.media_stream": 2,
-                "profile.managed_default_content_settings.plugins": 2,
-                "profile.managed_default_content_settings.popups": 2,
-                "profile.managed_default_content_settings.geolocation": 2,
-                "profile.managed_default_content_settings.automatic_downloads": 2,
-            }
-            options.add_experimental_option("prefs", prefs)
-            
-            self.driver = webdriver.Chrome(options=options)
-            
-            # 속도 최적화: 타임아웃 극단적 단축
-            self.driver.set_page_load_timeout(5)   # 10초 → 5초
-            self.driver.implicitly_wait(1)         # 2초 → 1초
+            try:
+                options = Options()
+                if self.headless:
+                    options.add_argument('--headless')
+                
+                # 속도 최적화 옵션들 (대폭 강화)
+                options.add_argument('--no-sandbox')
+                options.add_argument('--disable-dev-shm-usage')
+                options.add_argument('--disable-gpu')
+                options.add_argument('--disable-extensions')
+                options.add_argument('--disable-plugins')
+                options.add_argument('--disable-images')  # 이미지 로딩 차단
+                options.add_argument('--disable-css')     # CSS 로딩 차단
+                options.add_argument('--disable-web-security')
+                options.add_argument('--disable-features=TranslateUI')
+                options.add_argument('--disable-ipc-flooding-protection')
+                options.add_argument('--disable-renderer-backgrounding')
+                options.add_argument('--disable-backgrounding-occluded-windows')
+                options.add_argument('--disable-client-side-phishing-detection')
+                options.add_argument('--disable-sync')
+                options.add_argument('--disable-default-apps')
+                options.add_argument('--no-first-run')
+                options.add_argument('--no-default-browser-check')
+                options.add_argument('--window-size=1280,720')
+                
+                # 추가 속도 최적화 (더 공격적)
+                options.add_argument('--disable-logging')
+                options.add_argument('--disable-network-service-logging')
+                options.add_argument('--aggressive-cache-discard')
+                options.add_argument('--disable-blink-features=AutomationControlled')
+                options.add_argument('--disable-features=VizDisplayCompositor')
+                options.add_argument('--disable-3d-apis')
+                options.add_argument('--disable-smooth-scrolling')
+                options.add_argument('--disable-threaded-scrolling')
+                
+                # 배포 환경 최적화 (Render, Heroku 등)
+                options.add_argument('--disable-dev-tools')
+                options.add_argument('--remote-debugging-port=9223')
+                
+                # Chrome 바이너리 경로 자동 감지 (여러 위치 확인)
+                chrome_bin = os.environ.get('GOOGLE_CHROME_BIN')
+                if not chrome_bin:
+                    # 일반적인 Chrome 설치 위치들 확인
+                    possible_paths = [
+                        '/usr/bin/google-chrome',
+                        '/usr/bin/google-chrome-stable', 
+                        '/opt/google/chrome/chrome',
+                        '/usr/bin/chromium-browser'
+                    ]
+                    
+                    for path in possible_paths:
+                        if os.path.exists(path):
+                            chrome_bin = path
+                            print(f"🔍 ICTR Chrome 바이너리 발견: {chrome_bin}")
+                            break
+                
+                if chrome_bin and os.path.exists(chrome_bin):
+                    options.binary_location = chrome_bin
+                    print(f"✅ ICTR Chrome 바이너리 설정: {chrome_bin}")
+                else:
+                    print("⚠️  ICTR Chrome 바이너리 경로를 찾을 수 없습니다. 시스템 기본값 사용")
+                
+                # 페이지 로딩 전략을 eager로 변경 (더 안정적)
+                options.page_load_strategy = 'eager'
+                
+                # 불필요한 리소스 차단 (더 공격적)
+                prefs = {
+                    "profile.managed_default_content_settings.images": 2,
+                    "profile.default_content_setting_values.notifications": 2,
+                    "profile.managed_default_content_settings.media_stream": 2,
+                    "profile.managed_default_content_settings.plugins": 2,
+                    "profile.managed_default_content_settings.popups": 2,
+                    "profile.managed_default_content_settings.geolocation": 2,
+                    "profile.managed_default_content_settings.automatic_downloads": 2,
+                }
+                options.add_experimental_option("prefs", prefs)
+                
+                # WebDriver Manager를 사용해서 자동으로 ChromeDriver 관리
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=options)
+                
+                # 속도 최적화: 타임아웃 극단적 단축
+                self.driver.set_page_load_timeout(10)   # 5초 → 10초 (안정성 고려)
+                self.driver.implicitly_wait(2)          # 1초 → 2초 (안정성 고려)
+                
+                print(f"✅ ICTR Chrome WebDriver 초기화 완료 (headless: {self.headless})")
+                
+            except WebDriverException as e:
+                error_msg = f"ICTR WebDriver 초기화 실패: {str(e)}"
+                print(f"❌ {error_msg}")
+                raise RuntimeError(f"인천교통공사 사이트 크롤링을 위한 브라우저를 시작할 수 없습니다. {error_msg}")
+            except Exception as e:
+                error_msg = f"예상치 못한 ICTR WebDriver 오류: {str(e)}"
+                print(f"❌ {error_msg}")
+                raise RuntimeError(f"인천교통공사 크롤링 브라우저 설정 중 오류가 발생했습니다. {error_msg}")
             
         return self.driver
     
