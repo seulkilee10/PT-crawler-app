@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 다중 사이트 교통정보 크롤러</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 다중 사이트 크롤러</h1>
+            <p>TOPIS와 인천교통공사 공지사항을 통합 수집하고 Word로 다운로드하세요</p>
+        </div>
+        
+        <div class="main-card">
+            <h2 class="section-title">🔍 크롤링 설정</h2>
+            
+            <!-- 한 줄 설정 -->
+            <div class="compact-settings">
+                <div class="setting-row">
+                    <div class="setting-group">
+                        <label>🌐 사이트</label>
+                        <select id="siteSelect" onchange="changeSite()">
+                            <option value="topis">🚗 TOPIS</option>
+                            <option value="ictr">🚇 인천교통공사</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>📅 시작일</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>📅 종료일</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>📄 페이지</label>
+                        <select id="maxPages">
+                            <option value="1" selected>1페이지</option>
+                            <option value="2">2페이지</option>
+                            <option value="3">3페이지</option>
+                            <option value="5">5페이지</option>
+                        </select>
+                    </div>
+                    
+                    
+                    <div class="setting-group">
+                        <button class="primary-btn" onclick="startCrawling()">🚀 크롤링</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 간단한 안내 -->
+            <div class="info-message">
+                <span id="siteInfo">📊 TOPIS: 모든 카테고리 공지사항 수집</span>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="loading-message" id="loadingMessage">공지사항을 수집하고 있습니다...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="main-card">
+                <h2 class="section-title">📊 크롤링 결과</h2>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/crawler.js') }}"></script>
+</body>
+</html>
