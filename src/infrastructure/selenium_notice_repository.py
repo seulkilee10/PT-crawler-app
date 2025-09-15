@@ -110,6 +110,15 @@ class SeleniumNoticeRepository(NoticeRepository):
                 
                 print(f"✅ Chrome WebDriver 초기화 완료 (headless: {self.headless})")
                 
+                # 크롤링 디버깅을 위한 테스트
+                try:
+                    print(f"🌐 TOPIS 접근 테스트: {self.base_url}")
+                    test_driver = self.driver
+                    test_driver.get(self.base_url)
+                    print(f"✅ TOPIS 사이트 접근 성공: {test_driver.title}")
+                except Exception as e:
+                    print(f"❌ TOPIS 사이트 접근 실패: {str(e)}")
+                
             except WebDriverException as e:
                 error_msg = f"WebDriver 초기화 실패: {str(e)}"
                 print(f"❌ {error_msg}")
@@ -178,14 +187,24 @@ class SeleniumNoticeRepository(NoticeRepository):
             
             # Navigate to the notice list page
             notice_url = f"{self.base_url}/notice/openNoticeList.do"
+            print(f"🔍 TOPIS 크롤링 시작: {notice_url}")
+            print(f"📋 카테고리: {category}, 페이지: {page}, 개수: {per_page}")
+            
             # 페이지 로드
             driver.get(notice_url)
+            print(f"✅ 페이지 로드 완료: {driver.title}")
             
             # Wait for the page to load
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "notiList"))
-            )
-            # 페이지 로드 완료
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "notiList"))
+                )
+                print("✅ 공지사항 목록 요소 로딩 완료")
+            except Exception as e:
+                print(f"❌ 공지사항 목록 로딩 실패: {str(e)}")
+                print(f"🔍 현재 URL: {driver.current_url}")
+                print(f"🔍 페이지 소스 일부: {driver.page_source[:500]}")
+                return []
             
             # Click on the appropriate tab if not ALL
             if category != NoticeCategory.ALL:
